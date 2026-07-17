@@ -31,6 +31,20 @@ Try it locally without installing:
 claude --plugin-dir ./orz-claude-plugin
 ```
 
+## Maintenance
+
+The four skill directories are vendored from the canonical family repositories
+kept beside this repository in the `orz-family` workspace. After changing a
+canonical skill, synchronize and verify the plugin with:
+
+```bash
+./scripts/sync-skills.sh
+./scripts/sync-skills.sh --check
+```
+
+Release the plugin alongside family documentation changes so its guidance,
+package versions, and positioning do not drift.
+
 ## Why it's different
 
 Every other Markdown renderer is one-way: it throws the Markdown away and leaves
