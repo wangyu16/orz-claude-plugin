@@ -12,7 +12,7 @@ server, no re-export.
 | Skill | What it does |
 |---|---|
 | `orz-markdown` | The syntax reference — KaTeX math, Mermaid and SMILES diagrams, `:::` containers, footnotes, TOC, block IDs, and the 12 bundled themes. |
-| `orz-mdhtml` | Author `.md.html` documents that read like a themed webpage and edit in the browser. |
+| `orz-mdhtml` | Author `x.md` text twins and their self-editing `x.md.html` files (orz text format 1) that read like a themed webpage and edit in the browser; inspect, upgrade and recover older files. |
 | `orz-slides` | Author `.slides.html` decks (reveal.js) from Markdown with a small layout syntax. |
 | `orz-paged` | Author `.paged.html` print documents (paged.js) — real print pages, exported to PDF by printing. |
 

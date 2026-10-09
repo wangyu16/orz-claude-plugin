@@ -1,146 +1,318 @@
 ---
 name: orz-mdhtml
-description: Create and use single-file, self-editing .md.html documents from Markdown (orz-mdhtml). Use when a user wants a shareable HTML file that reads like a webpage but can be edited and saved in the browser — e.g. teaching handouts, notes, or published articles.
+description: Create, edit, inspect and upgrade orz-mdhtml documents — a Markdown text twin (x.md, orz text format 1, with a {{nyml kind document}} header) and its single-file, self-editing x.md.html that reads like a themed web page and edits and saves itself in the browser. Use when a user wants a shareable HTML document they can edit without an app (handouts, notes, articles), when you meet a .md.html file and need its text, when a .md.html must be changed, checked or moved to a newer version, or when a web app should embed the editor. Edit the text, never the HTML; assemble with the orz-mdhtml CLI.
 ---
 
-# orz-mdhtml — single-file, self-editing `.md.html`
+# orz-mdhtml — Markdown that edits itself
 
-`orz-mdhtml` turns a Markdown file into **one `.md.html` file** that:
+A document has two forms:
 
-- reads like a normal themed webpage (rendered in an isolated `<iframe>`),
-- can be **edited in the browser** (CodeMirror source + live incremental preview),
-- lets readers **switch themes**, **export a local copy**, and
-  **copy rendered content as Markdown source**,
-- **saves itself**: in place on local files (Chromium File System Access API),
-  or as a download elsewhere.
+- the **text twin** `x.md` — the document itself: Markdown (orz-markdown
+  syntax) with a header block at the top;
+- the **self-editing file** `x.md.html` = `assemble(text)` — one HTML page
+  holding the exact text in a `#orz-src` island plus a regenerable shell (read
+  view, editor, saves, quiet update).
 
-The Markdown source is embedded in the file as the single source of truth
-(`<script type="text/markdown" id="orz-src">`). Saving re-serializes the whole
-document, so the file reproduces itself.
+**Rule: change the text, then assemble. Never edit, restructure or
+"fix" the HTML** — everything but the island is regenerated, and a save in the
+browser rewrites the whole file from the text.
 
-## When to use it
+The CLI is `orz-mdhtml` (Node ≥ 20.16; `npx orz-mdhtml@1 …` needs no install;
+this skill is for 1.x).
+Use `--json` on any command for one machine-readable object on stdout. Exit
+codes: 0 done, 1 refused or failed, 2 usage error. Nothing that could hold
+other work is overwritten unless you pass `--force` — when a command refuses,
+read the error (with `--json`: `reason` and `next`, below), do not reach for
+`--force` by reflex.
 
-- A user wants a **single shareable file** (email/USB/served page) that is both
-  readable and editable without any app.
-- **Teaching**: a teacher serves a handout as a web page; students download
-  their own copy to annotate.
-- Prefer plain `.md` when the target is a repo/pipeline; prefer orz-markdown's
-  standalone HTML when no editing is needed; use `.md.html` when in-browser
-  editing or reader annotation matters.
+**The one robust idiom:** pass the `sha256` the last command printed as
+`--replaces`. `assemble`, `extract`, `upgrade` and `inspect` print the
+SHA-256 of the text they wrote or read (`--json`: `sha256`; `inspect`:
+`twin.sha256` for the sibling); `assemble x.md --replaces <that sha256>`
+replaces the file only while it still holds that text. It works with no
+cache, no git, in a shallow clone, in a fresh sandbox.
 
-## Generate a file
-
-Node 18+. The CLI is on npm — run it with `npx` (no install), or `npm i -g
-orz-mdhtml`, or `npm run gen --` in a clone:
+## Create a document
 
 ```bash
-npx orz-mdhtml <input.md> [options]
-  -o, --out <file>   output path (default: <input>.md.html)
-  --theme <name>     default theme id (default: light-neat-3)
-  --cdn              reference the renderer from jsDelivr (default; small files)
-  --inline           embed the renderer bundle (larger file, no renderer fetch)
-  --title <text>     document <title>
+npx orz-mdhtml@1 new notes.md --title "Field notes" [--theme light-academic-1] [--measure wide] [--lang en]
+# edit notes.md (the body; header keys below)
+npx orz-mdhtml@1 assemble notes.md          # → notes.md.html (inline engine, ~1 MB, works as a file)
+npx orz-mdhtml@1 assemble notes.md --cdn    # → a small file that loads the engine from jsDelivr (for web pages)
 ```
 
-Default `--cdn` produces small files that fetch the renderer
-(`orz-mdhtml-browser`) from jsDelivr on first open (cached after). Use
-`--inline` only when you want the file to carry its own renderer (~750 KB);
-note even `--inline` still fetches themes and editor libraries from CDN.
+`new` mints the document's `uid`; keep it (it keys the reader's preferences
+and the save handle). `new --html` writes both files at once. `orz-mdhtml
+notes.md` is short for `assemble`. Theme ids: `orz-mdhtml themes`.
 
-Theme ids: `light-neat-1/2/3`, `light-academic-1/2`, `beige-decent-1/2`,
-`light-playful-1/2`, `dark-elegant-1/2/3`.
+## Edit an existing document
 
-### Portable metadata
+The `.md.html` can be edited and saved in a browser, so it may hold work the
+text twin lacks — even when `x.md` is the newer file. Always compare first.
 
-To give a generated file machine-readable authorship, license, canonical source,
-date, description, or keywords, put a leading `{{nyml kind: meta}}` block in the
-Markdown. The builder consumes it and writes standard `<head>` tags plus an
-`#orz-meta` JSON island; those emitted records survive later browser saves and
-framework updates.
+1. **Compare before you edit.** `npx orz-mdhtml@1 inspect x.md --json`
+   (works with only `x.md.html` too) and read `sha256` and `twin`:
+   - no `x.md` yet → `npx orz-mdhtml@1 extract x.md.html` (exact, byte for byte);
+   - `twin.holds: "same"` → go on;
+   - `twin.holds: "different"` with `twin.earlier` set → the file holds an
+     earlier text of `x.md`; go on (assemble replaces it);
+   - `twin.holds: "different"` otherwise → `x.md.html` holds other (browser)
+     edits: `npx orz-mdhtml@1 extract x.md.html -o x.browser.md`, merge its
+     changes into `x.md` (or ask the user which to keep), and **note
+     `twin.sha256`** (the text the file holds now);
+   - if `x.md` itself has nothing of its own to keep (the file is the newer
+     work), `npx orz-mdhtml@1 extract x.md.html` replaces it when it is a known
+     state (unchanged since the CLI last synced the pair — and no other
+     text was synced with the file since — or committed in git), or `extract x.md.html --replaces <sha256 of x.md>`. A plain
+     `extract` never overwrites an `x.md` that may hold edits.
+2. Edit `x.md`. Document settings go in the header, not in the HTML and not
+   as CLI options (`assemble` refuses `--title`, `--theme`…).
+3. `npx orz-mdhtml@1 assemble x.md` → `x.md.html`. No `--force` is needed
+   when `x.md.html` holds an earlier state of `x.md` the CLI can prove: what
+   `orz-mdhtml` itself last wrote into it or read out of it (after `extract`,
+   `new --html` or a previous `assemble`, for the same pair — with `-o` too:
+   `assemble x.md -o public/x.md.html --cdn` again and again needs nothing),
+   or (for `x.md.html` itself) a committed version of `x.md` in git (HEAD,
+   staged, or one of its 20 most recent commits — a full clone works; a
+   shallow checkout, CI's default `--depth 1`, knows only the last commit:
+   use `--replaces <sha256>` there). A text equal to one of the twin's last
+   20 commits counts as a known earlier state, so a deliberate revert of
+   the other file to such a text is replaced — commit the revert first.
+   **In a fresh sandbox with no cache and no history, use the token:**
+   `npx orz-mdhtml@1 assemble x.md --replaces <twin.sha256>` replaces the file
+   only while it still holds the text you saw (a compare-and-swap);
+   a browser save made since is refused (`replaces-mismatch`). If assemble
+   refuses (`twin-differs`), someone saved in the browser: do step 1 (extract
+   to `x.browser.md`, merge), then run the assemble command the refusal
+   names (your own arguments plus `--replaces` and the hash). If only the
+   file changed (`x.md` is exactly what the CLI last synced), `next` is a
+   plain `extract x.md.html`: run it. A warning "pair not recorded (cache
+   not writable)" means the next assemble needs `--replaces` with the hash
+   just printed. Only when `x.md` has everything,
+   `npx orz-mdhtml@1 assemble x.md --force` (the replaced file is kept as
+   `x.md.html~`, or `x.md.html~1`, `~2`… — a backup is never overwritten).
+   `--json` reports `replaced: "cache" | "git-head" | "git-index" |
+   "git-log" | "token" | null` and the `sha256` of the text the file now
+   holds.
+
+Delivery: `assemble` keeps the existing file's delivery (cdn stays cdn)
+unless you pass `--cdn` or `--inline`; a new file is inline.
+
+Includes: `assemble` keeps the includes the old file recorded;
+`assemble --resolve-includes` reads `{{md part.md}}` files from the text's
+folder (never outside it). Each include left unresolved is reported once as
+a warning, with why, and in `--json` `unresolved: [{ target, kind, reason }]`
+— the file shows an "Included file not available" note there. A recorded
+include whose file has changed since is a `stale-record` warning (`--json`
+`stale`): run `assemble --resolve-includes` to record the current text.
+
+Content syntax (math, `{{mermaid}}`, `{{smiles}}`, `{{chart}}`, `::: ` containers,
+`{{md path}}` includes, …) is orz-markdown's: read its skill,
+`node_modules/orz-markdown/orz-markdown-skills/SKILL.md` or
+`https://cdn.jsdelivr.net/npm/orz-markdown/orz-markdown-skills/SKILL.md`.
+A relative link to another text twin (`[next](week2.md)`) becomes a link to
+its `.md.html` in the file.
+
+## The document header (FC-18)
 
 ```markdown
 {{nyml
-kind: meta
-title: Field Notes
-author: Your Name
+kind: document
+carrier: md
+uid: doc-7kq2m9x4p1r8s3t5
+title: Cell Biology — Week 3
+author: Yu Wang
+lang: en
+theme: light-academic-1
+measure: wide
 license: CC-BY-4.0
-license_url: https://creativecommons.org/licenses/by/4.0/
-source: https://example.org/field-notes
-date: 2026-07-11
 }}
+
+# Cell Biology — Week 3
 ```
 
-Programmatic hosts may pass `metadata` to `buildMdHtml`; host values win field
-by field. Do not duplicate the metadata block after generation: the normalized
-`#orz-meta` island is the generated file's persistent metadata record.
+- `{{nyml` alone on the first line, `kind: document` on the next, `}}` alone
+  on the last. It renders nothing.
+- Keys (md): `carrier` (`md`), `uid` (`doc-` + 10–32 of `[0-9a-z]`; do not
+  invent or change one — `new` mints it), `title`, `author`, `description`,
+  `date`, `keywords` (comma-separated), `source`, `license` /
+  `license_name` / `license_url`, `lang` (BCP 47, default `en`), `theme` (an
+  id from `orz-mdhtml themes`, default `light-neat-3`), `measure` (`normal`,
+  `wide`, `full`; default `normal`), `format` (only `1`; omit it).
+- Your own tool's keys: prefix `x_<tool>_`. Unknown keys are kept.
+- One `key: value` per line; `key: |` then more-indented lines for a
+  multi-line value. A value must not contain `}}`. Edit the header in place —
+  change one line, never rewrite or reorder the block.
+- No `title`? The file's title is the first heading.
+- An old `{{nyml kind: meta}}` block is read as the header and becomes
+  `kind: document` on the first edit.
 
-## Authoring the Markdown
+## Inspect before you act
 
-The source is **orz-markdown** Markdown — standard Markdown plus KaTeX math,
-`{{name body}}` plugins (mermaid, smiles, chart, qrcode, youtube, toc, …),
-`::: name` containers, and `{{attrs[#id .class]}}`. For the full syntax, read the
-orz-markdown skill, shipped at:
-
+```bash
+npx orz-mdhtml@1 inspect x.md.html --json    # also works on a text, a 0.x file, any HTML
 ```
-node_modules/orz-markdown/orz-markdown-skills/SKILL.md
+
+Read `input` (`text`, `assembled`, `legacy`, `html`), `kind`, `format`,
+`writable`, `shell.version` and `shell.relation` (`older` / `same` /
+`newer` than this tool), `uid`, `title`, `header.keys`, `includes`, `lint`,
+`checks` (a file's structure), `sha256` (of the text it holds: the
+`--replaces` token), `twin` (the sibling `x.md` ↔ `x.md.html`: `holds`
+`same` / `different` / `none`; `newer` — which was modified last: `input`
+the inspected file, `twin` its sibling, `same-time`, `unknown`; `sha256` of
+the sibling's text; `earlier` when known), and **follow `advice`** — it
+names the command to run, with your file names:
+
+- `legacy` (an orz-mdhtml 0.x file) → `upgrade` (its own "Framework 1.0.0
+  available" banner cannot update it: that ends with "check your
+  connection" and changes nothing). **Next to an existing `x.md`** (often a
+  0.x text): `upgrade x.md.html --text x.browser.md`, then compare and merge
+  into `x.md` (keep the new header) — `extract` does not read 0.x files;
+- `twin.holds: "different"` → the text and the file differ: extract and
+  merge before assembling (see "Edit an existing document") — unless
+  `twin.earlier` is set (`cache`, `git-head`, `git-index`, `git-log`): the
+  file holds an earlier text of `x.md`, and `assemble` replaces it without
+  `--force`;
+- `checks.island: "unclosed"` → the file was cut off: the text may be
+  incomplete — recover what you can (`extract x.md.html -o
+  x.recovered.md`), compare with the twin or a backup; `upgrade` refuses it
+  unless `--force`. `checks.engine: "different"` / `"missing"` or
+  `checks.end: "unclosed"` → `upgrade` re-assembles it (the text is intact);
+- an older shell → `upgrade` re-assembles it (text unchanged);
+- a newer shell (`shell.relation: "newer"`) or a newer text `format` → use
+  `npx orz-mdhtml@latest`; this tool's `assemble` and `upgrade` refuse to
+  replace a newer shell (`newer-shell`) unless `--force` — do not force it;
+- lint errors → fix the header, then assemble;
+- another kind (`slides`, `paged`) → its own tool (`npx orz-slides`, …).
+
+## When a command refuses (`--json`)
+
+A failure is `{ "ok": false, "error", "reason", "next"?, "exitCode" }`.
+`next` is `{ "command", "args" }`: run `npx orz-mdhtml@1 <command> <args…>`
+(e.g. `extract x.md.html -o x.browser.md`), then merge as above. Stable
+`reason` codes:
+
+- `twin-differs` — the twin holds a different text that is not a known
+  state (assemble: `x.md.html` may hold browser work; extract/upgrade:
+  `x.md` may hold edits) → extract to `x.browser.md`, merge, assemble with
+  `--replaces`;
+- `replaces-mismatch` — the file no longer holds the text whose hash you
+  passed (a save happened since) → extract again and merge;
+- `legacy-file` — a 0.x file → `upgrade` (next to a text: `--text
+  x.browser.md`), merge, then `assemble x.md --replaces` with the `sha256`
+  upgrade printed (not `--force`);
+- `newer-shell` / `newer-format` → `npx orz-mdhtml@latest`;
+- `unclosed-island` — upgrade of a cut-off file → recover with
+  `extract -o x.recovered.md`;
+- `output-differs` — the `-o` output holds **another text** than the one
+  this pair last had there (saved in the browser, or written from another
+  text) → follow `next` (`extract <out> -o x.browser.md`), merge, then the
+  assemble command the message names (with `--replaces`); or it holds
+  **another document** (another uid; no `next`) → choose another `-o` path
+  (`extract`/`upgrade` refuse the same way to write another document's text
+  over a text). Every `next` is safe to run verbatim: it never replaces a
+  text with another line of work. A plain `extract x.md.html` (the file
+  replaces `x.md`) is suggested only when `x.md` is unchanged since the CLI
+  last synced it (or committed) AND both texts carry the same `uid`; without
+  a shared uid the file may be another document's (copied over it), so
+  `next` is `extract x.md.html -o x.browser.md` — keep the `uid` `new` wrote;
+- `not-orz`, `exists` — an output you did not expect to replace (an empty
+  file is reported as empty: damaged) → choose another path;
+- `assembled-input`, `other-kind`, `invalid-text`, `no-such-file`,
+  `unreadable`, `not-utf8`, `write-failed`, `engine-unavailable`,
+  `bad-usage` (exit 2), `failed`.
+
+## Upgrade old files
+
+```bash
+npx orz-mdhtml@1 upgrade old.md.html            # in place, and writes old.md (its text twin)
+npx orz-mdhtml@1 upgrade old.md.html -o new.md.html --text new.md
 ```
 
-You write only the `.md`; do not hand-write the `.md.html`. To change content,
-edit the `.md` and regenerate (or edit in the browser and Save).
+A 0.x file (orz-mdhtml ≤ 0.9.3) keeps its source exactly; its `#orz-meta`
+metadata, saved theme and `<title>` move into the header, and it gets a `uid`.
+The delivery (inline or cdn) is kept unless `--cdn` / `--inline`. A format-1
+file of an older shell is re-assembled with its text and includes unchanged
+(this also repairs a damaged engine). A file of a newer shell is refused (no
+downgrades), and so is a file cut off inside its text (the text may be
+incomplete) — `--force` overrides either and keeps the old file as `x.md.html~`.
+If `x.md` already exists and differs (a 0.x text next to its 0.x file),
+`upgrade` refuses to overwrite it: `upgrade x.md.html --text x.browser.md`,
+then merge. Upgrading twice changes nothing more. With orz-mdhtml 1.0.0 on npm,
+a 0.9.x file's own "Framework 1.0.0 available" banner offers an
+update that fails harmlessly ("check your connection"): use
+`orz-mdhtml upgrade`.
 
-## What the generated file needs at view time
+## Recover the text from any version by hand
 
-"Self-contained" means *one file*, **not** *offline*. **Viewing requires
-internet**: the renderer (`orz-mdhtml-browser` from jsDelivr by default, or
-embedded with `--inline`), theme CSS (jsDelivr `orz-markdown/themes/...`), KaTeX
-CSS, highlight.js, Mermaid, SmilesDrawer, Chart.js, and — only on first edit —
-CodeMirror and morphdom. All are CDN-cached after first load.
+When the CLI is not available, read the `<script type="text/markdown"
+id="orz-src">` element's raw content (`textContent`, or the bytes between the
+tags) and undo its escaping:
 
-## Deploying / sharing
+- **Format 1** (`<script id="orz-shell">` exists, `data-orz-format="1"` on the
+  island): remove **one** backslash after each `<` that is followed by
+  backslashes and then `script` or `/script` (any case); turn the line breaks
+  into the style named by `data-orz-eol` (`lf`, `crlf`, `cr`); prefix U+FEFF
+  when `data-orz-bom` is present. That is the exact text, header included.
+  In code: `extract(html).text` from `orz-markdown/carrier` (or
+  `orz-mdhtml`'s `extract`). `#orz-includes` (JSON) holds includes resolved
+  at assembly; `#orz-meta` and `<head>` are derived from the header.
+- **0.x** (no `#orz-shell`; `<meta name="generator" content="orz-mdhtml">`):
+  replace each `<\/script` (any case) with `</script`; remove the one line
+  break the writer added at the start and the one at the end (the island is
+  `"\n" + source + "\n"`). Metadata is **not** in the island: it is the JSON
+  of `<script id="orz-meta">` (title, author, license, …); the reader's saved
+  theme is `data-theme` on `<html>`. Prefer `orz-mdhtml upgrade`, which does
+  all of this and writes a header.
 
-- **Distribute the file**: send/host the `.md.html`; readers open it in a browser.
-- **Serve it**: any static host works. When served over http(s), readers can't
-  save back to the server — the file detects this and tells them to **Download a
-  local copy** to edit and save. In-place Save only applies to `file://` copies
-  they own.
-- **Editing/Save** needs a Chromium browser (Chrome/Edge); reading, themes,
-  export, and copy-as-markdown work in all modern browsers.
+## In a web app
 
-## Host integration (save + AI)
+The same editor is a component: `npm i orz-mdhtml-browser@1`, then
+`mountEditor(element, { text, hooks: { save, ai, fetchInclude, … }, nonce })`
+(ES module, or `globalThis.OrzCarrier` from the IIFE). Store the text; call
+`assemble(text)` only when a file is needed. Hooks, the AI review flow and the
+CSP recipe: `docs/embedding.md`, shipped in both packages
+(`node_modules/orz-mdhtml-browser/docs/embedding.md`, or
+`https://cdn.jsdelivr.net/npm/orz-mdhtml-browser@1/docs/embedding.md`).
+Platforms that show assembled files in an iframe use the host protocols
+(orz-markdown `spec/host-protocols.md`).
 
-When a platform embeds the file in an iframe, two independent `postMessage`
-protocols activate after a handshake (nothing changes standalone):
+## What the file does for its reader
 
-- **`orz-host-save@1`** — the file's Save posts to the host instead of the file
-  system.
-- **`orz-host-ai@1`** — if the host advertises AI operations, selecting text
-  shows an *"Improve selection"* assistant; the file sends the passage to the
-  host and applies the returned suggestion. The file owns the UI; the host owns
-  the model.
+Read view with the header's theme and ONE control, a pencil at the
+bottom-left (click: Edit; hover or tap: the list of every operation,
+including a reader-only *Text size* 80–160 % that is never saved into the
+file); **Edit** (Cmd/Ctrl+E): editor + live preview, theme and width
+pickers that write the header, the orz seal and the GitHub link at the far
+end of its bar; **Save**
+(Cmd/Ctrl+S) writes `assemble(text)` back in place in Chromium (File System
+Access) and downloads elsewhere; a served (http) page offers *Download a
+copy*; whenever the file changed on disk since the page opened it (any
+`assemble` you ran while it was open, not only `--force`), the save asks
+the reader — *Replace it* or *Download a copy instead* — instead of
+overwriting your work; *New document* and *Save as new copy* (new `uid`) in the pencil's list and under More; a quiet,
+once-a-day update offer on local files. Reading and editing work in every
+modern browser; themes, math styles, diagram libraries and the editor load
+from CDNs.
 
-Both are specified in [PROTOCOL.md](../PROTOCOL.md). As a file author you don't
-write any of this — it's built into the runtime; just know the file *can* be
-edited with host-provided save + AI.
+## Gotchas
 
-## Gotchas for agents
-
-- Edit the `.md` and regenerate; never restructure the generated HTML by hand —
-  the in-file runtime expects specific element ids (`#orz-src`, `#orz-frame`,
-  `#orz-doc`, etc.).
-- If you post-process the rendered HTML, **preserve `data-md` and
-  `data-src-line` attributes** — they power copy-as-markdown and scroll-sync.
-- The embedded source guards `</script>` as `<\/script>`; read it back via the
-  `#orz-src` element's `textContent` and reverse that escape.
-- Depends on `orz-markdown` (`^1.4.1`); copy-as-markdown needs ≥ 1.2.0, the
-  whole-table/blockquote copy fix landed in ≥ 1.2.1, and explicit image-size
-  rendering is fixed in ≥ 1.3.2. Portable document metadata requires ≥ 1.4.0.
-
-## Security
-
-`.md.html` files are **single-file executable HTML** — opening one runs its
-embedded JavaScript. Treat them like programs: only open or edit files from a
-trusted source, and advise users the same. The one-click framework update is
-opt-in (edit view only, explicit confirm) and always fetches from the hardcoded
-canonical jsDelivr packages — a tampered file can't redirect it. A file's
-integrity can't be verified from inside it; for authenticity, verify out-of-band.
-See the README "Security" section.
+- Do not edit `x.md.html` by hand, and never serialize a live page: the text
+  is the document.
+- A file shows only includes stored in its `#orz-includes`. The CLI keeps
+  the old file's record and resolves file includes with
+  `assemble --resolve-includes` (from the text's folder only); it never
+  fetches URL includes (library callers pass `assemble(text, { includes })`;
+  `upgrade` keeps a file's own). Unresolved includes are warnings.
+- `--force` keeps what it replaces as `<file>~` (or `<file>~1`, `~2`…;
+  also `new --force`, for both files); still, compare before you force (see "Edit an existing
+  document"). The pair records live in `$XDG_CACHE_HOME/orz-mdhtml/` (else
+  `~/.cache/orz-mdhtml/`); deleting them only makes `assemble` and `extract`
+  stricter — `--replaces <sha256>` works without them.
+- Keep the `uid` across revisions of a document. A different document needs
+  its own: start it with `new` (or the file's *Save as new copy*), never by
+  copying another text's header with its `uid`.
+- Package: `orz-mdhtml` 1.x depends on `orz-markdown ^2.2.0` (the carrier kit);
+  files record the shell version that wrote them.
+- Security: a `.md.html` runs the code inside it — treat files like programs
+  and open only trusted ones.
