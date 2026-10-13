@@ -10,7 +10,7 @@ Every page that shows orz-markdown output gets its CSS in two layers.
 
 | Layer | File | Owns | Never contains |
 |---|---|---|---|
-| **Structure** | `themes/common.css` (shared, one copy) | How things *work*: `::: left` floats and its width cap, `::: right` / `::: center` alignment (even in themes that justify text), the `::: cols` grid and its mobile collapse, tab switching and the no-JS fallback, horizontal scrolling for tables, code and long equations, 16:9 YouTube frames, diagram and chart width caps, SMILES sizing, QR sizing (text-size inside a sentence, 6rem when alone in its paragraph as `qrcode--standalone`, 2cm / 3cm in print), the article measure (`max-width: var(--markdown-body-max-width)`) and the opt-in `.measure-wide` / `.measure-full` classes, the first/last-child margin trim inside callouts and other containers, the family's single 640px breakpoint, and print (every tab printed, embeds hidden, no page breaks inside figures) | colours, fonts, borders, shadows (except the functional QR/SMILES rules) |
+| **Structure** | `themes/common.css` (shared, one copy) | How things *work*: `::: left` floats and its width cap, `::: right` / `::: center` alignment (even in themes that justify text), the `::: cols` grid and its mobile collapse, tab switching and the no-JS fallback, horizontal scrolling for tables, code and long equations, 16:9 YouTube frames, diagram and chart width caps, SMILES sizing, QR sizing (text-size inside a sentence, 6rem when alone in its paragraph as `qrcode--standalone`, 2cm / 3cm in print), the article measure (`max-width: var(--markdown-body-max-width)`) and the opt-in `.measure-wide` / `.measure-full` classes, the first/last-child margin trim inside callouts and other containers, the family's single 640px breakpoint, and print (every tab printed after its label, a YouTube embed printed as its address, no page breaks inside figures) | colours, fonts, borders, shadows (except the functional QR/SMILES rules) |
 | **Decoration** | one theme file (`light-neat-1.css`, …) | How things *look*: palette, typography, borders, backgrounds, radii, shadows, ornaments, and spacing rhythm (padding, margins, gaps) | any mechanism listed in the left column |
 
 Because the structure lives in one place, a layout fix reaches every theme at
@@ -62,6 +62,38 @@ enforces the split for every bundled theme and for the starter.
 7. **Check it.** Run `npm test`, and render `tests/example.html` (`npm run
    render`; `npm run render:minimal` renders the starter to
    `tests/example-minimal.html`) at desktop and phone widths in a real browser.
+
+## The baseline grid (opt-in, ≥ 2.3.0)
+
+A theme may set its text on a **ruled grid** on screen, as `light-playful-1`
+does (a ruled notebook: everything is either written on the lines or on a
+sheet attached on top of the paper). It opts in with one custom property on
+the article, **inside `@media screen`**:
+
+```css
+@media screen {
+  .markdown-body {
+    --orz-grid: var(--rule);   /* the pitch: an absolute length equal to the body line-height */
+    background-image: /* the ruling, from the content box top, every --orz-grid, at --orz-rule-at */;
+    background-origin: content-box;
+  }
+}
+```
+
+The theme's CSS sets running text in whole lines (paragraphs and lists with
+`line-height: var(--orz-grid)` and a blank line of padding, headings at whole
+multiples), applies `--orz-sh-h1`…`--orz-sh-h6`, `--orz-sh-fn` (a relative
+shift onto a rule) and `--orz-mb-…` (the margin that ends the block on a line),
+draws its rules at `--orz-rule-at`, and gives `.orz-off-grid` (a written block
+whose lines still leave the grid) and the sheets an opaque background. The
+enhancement (`enhanceDocument` in a page, `__orzEnhance` in the preview frame;
+`src/baseline-grid.ts`) measures those custom properties, places each block on
+the grid and grows each sheet to end on a rule, and keeps it so when the
+article's size changes or webfonts load. Without `--orz-grid` it does nothing,
+and it never runs in print (`@media screen`; orz-paged drops every `@media`
+block of a theme and rules its pages itself). Margins, paddings, line-height
+and backgrounds are decoration, so the contract above is unchanged; the
+opt-in is checked by `tests/themes.test.ts` (M.31).
 
 ## Design Token Pattern
 

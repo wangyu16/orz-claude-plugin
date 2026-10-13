@@ -14,7 +14,7 @@ server, no re-export.
 | `orz-markdown` | The syntax reference — KaTeX math, Mermaid and SMILES diagrams, `:::` containers, footnotes, TOC, block IDs, and the 12 bundled themes. |
 | `orz-mdhtml` | Author `x.md` text twins and their self-editing `x.md.html` files (orz text format 1) that read like a themed webpage and edit in the browser; inspect, upgrade and recover older files. |
 | `orz-slides` | Author `.slides.html` decks (reveal.js) from Markdown with a small layout syntax. |
-| `orz-paged` | Author `.paged.html` print documents (paged.js) — real print pages, exported to PDF by printing. |
+| `orz-paged` | Author `x.paged.md` text twins and their self-editing `x.paged.html` print documents (orz text format 1, Paged.js) — real print pages with 9 print themes, templates, page furniture and show/hide versions, exported to PDF by printing; inspect and upgrade 0.x files. |
 
 ## Install
 
@@ -52,8 +52,8 @@ you with HTML. orz keeps the source inside the file and edits it in place, so th
 rendered document *is* the editable document.
 
 Saving in place uses the File System Access API (Chromium); other browsers fall
-back to download. "One file" means one file — the enhancers (math, diagrams,
-themes) load from a CDN unless you build with `--inline`.
+back to download. "One file" means one file — the carriers inline their engine
+by default; `--cdn` builds lighter files for the web.
 
 ## Packages
 
