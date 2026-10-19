@@ -13,7 +13,7 @@ server, no re-export.
 |---|---|
 | `orz-markdown` | The syntax reference — KaTeX math, Mermaid and SMILES diagrams, `:::` containers, footnotes, TOC, block IDs, and the 12 bundled themes. |
 | `orz-mdhtml` | Author `x.md` text twins and their self-editing `x.md.html` files (orz text format 1) that read like a themed webpage and edit in the browser; inspect, upgrade and recover older files. |
-| `orz-slides` | Author `.slides.html` decks (reveal.js) from Markdown with a small layout syntax. |
+| `orz-slides` | Author `x.slides.md` text twins and their self-editing `x.slides.html` decks (orz text format 1, reveal.js) — 14 themes, 16:9 or 4:3, a layout grammar for regions and floats, template pages and deck templates, a live card and single-slide editing; inspect, check the layout, and upgrade 0.x decks. |
 | `orz-paged` | Author `x.paged.md` text twins and their self-editing `x.paged.html` print documents (orz text format 1, Paged.js) — real print pages with 9 print themes, templates, page furniture and show/hide versions, exported to PDF by printing; inspect and upgrade 0.x files. |
 
 ## Install
