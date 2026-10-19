@@ -25,9 +25,11 @@ claude plugin marketplace add anthropics/claude-plugins-community
 claude plugin install orz-markdown@claude-community
 ```
 
-Try it locally without installing:
+Try it locally without installing (clone the repository first; `--plugin-dir`
+takes the clone's folder):
 
 ```bash
+git clone https://github.com/wangyu16/orz-claude-plugin.git
 claude --plugin-dir ./orz-claude-plugin
 ```
 
