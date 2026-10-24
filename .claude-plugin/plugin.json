@@ -1,6 +1,6 @@
 {
   "name": "orz-markdown",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Markdown that edits itself. Turn Markdown into one HTML file that carries its own source: .md.html documents that read like a themed webpage and edit in the browser, .slides.html decks, and .paged.html print documents that export to PDF. Includes the orz-markdown syntax reference — KaTeX math, Mermaid and SMILES diagrams, footnotes, TOC, block IDs, and themes.",
   "author": {
     "name": "Yu Wang",
