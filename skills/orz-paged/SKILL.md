@@ -214,7 +214,8 @@ front_matter: clean
   multi-line value. A value must not contain `}}`. Edit the header in place —
   change one line, never rewrite or reorder the block.
 - No `title`? The file's title is the first level-1 heading, else the title
-  of the first title element.
+  of the first title element, else `Untitled` (in the CLI and the browser
+  alike — never the file name).
 
 ## Templates
 
@@ -225,8 +226,9 @@ is a starter text plus layout defaults; `-page` gives the title its own page,
 `-section` an inline title block (0.x `article`/`report`/`exam` →
 `-section`). Start from one with `new --template`; the header's `template:`
 key changes layout defaults only (it never rewrites the text). In the file,
-the pencil's *Template* item changes only that key: its labels name the
-starters ("Report — title page"), but switching adds no title page;
+the pencil's *Template (page size)* item changes only that key: its choices
+name the template and the page size it sets (`report-page — Letter`);
+switching adds no title page;
 *New document from template…* saves a fresh document; the current one is
 never replaced.
 
@@ -580,7 +582,7 @@ failure is `{ "ok": false, "command", "error", "reason", "next"?, "exitCode" }`.
 ## Upgrade old files
 
 ```bash
-npx orz-paged@1 upgrade old.paged.html            # in place, and writes old.paged.md (its text twin)
+npx orz-paged@1 upgrade old.paged.html            # in place (the 0.x file kept as old.paged.html~), and writes old.paged.md (its text twin)
 npx orz-paged@1 upgrade old.paged.html -o new.paged.html --text new.paged.md
 ```
 
@@ -591,8 +593,10 @@ become one header at the top, with `carrier: paged`, a `uid`, and the 0.x
 inside `custom_css` becomes `} }`, reported). The delivery is kept unless
 `--cdn` / `--inline`. A format-1 file of an older shell is re-assembled with
 its text and includes unchanged. A newer shell and a cut-off file are refused
-(`--force` overrides and keeps `x.paged.html~`). Upgrading twice changes
-nothing more. `upgrade old.paged.html --no-text` writes the file only (no
+(`--force` overrides and keeps `x.paged.html~`). A 0.x file upgraded in place
+is kept as `x.paged.html~` (or `~1`, `~2`… when that name is taken; `--json`
+lists it in `backups`): delete it once the upgrade is checked — beside a page
+you serve, it is public too. Upgrading twice changes nothing more. `upgrade old.paged.html --no-text` writes the file only (no
 text twin).
 
 ## Recover the text from any version by hand
@@ -636,9 +640,9 @@ directly), downloads elsewhere; a save over a file changed on disk asks
 first. Cmd/Ctrl+P prints the pages once laid out (from the editor too: it
 leaves the editor first). A quiet, once-a-day update offer on local files.
 Copying from the pages gives Markdown, as in every orz file (`Some *emph*
-text and $x^2$.`); a code block broken across pages comes out as
-backtick-wrapped pieces instead of one fence — take a whole document's
-Markdown from the text twin.
+text and $x^2$.`), also across pages (a code block broken over pages copies
+as one fence; a split table as one table). A whole document's Markdown is its
+text twin.
 
 ## Gotchas
 
